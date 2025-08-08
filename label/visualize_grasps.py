@@ -1,3 +1,20 @@
+"""
+visualize_grasps.py
+
+可视化指定目录下的PNG图片及抓取标注
+
+示例：
+  # 可视化目录中的图片和标注
+  python visualize_grasps.py /path/to/directory
+
+使用说明：
+  - 使用左右箭头键或上下箭头键切换图片
+  - 按 's' 键保存当前可视化结果到目录中的 visualized_grasps 子目录
+  - 按 'q' 键或关闭窗口退出程序
+  - 按 'Home' 键跳转到第一张图片
+  - 按 'End' 键跳转到最后一张图片
+"""
+
 import os
 import glob
 import matplotlib.pyplot as plt

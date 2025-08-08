@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-dota_to_cornell.py
+convert_dota_to_cornell.py
 
 把 DOTA 标注（x1 y1 x2 y2 x3 y3 x4 y4 cls diff）转换为
 Cornell Grasping Dataset 标注（每行一个点，4 行为一组）。
 
 示例：
   # 转换单个 DOTA 文件
-  python dota_to_cornell.py --input grasp_dota.txt --output grasp.txt
+  python convert_dota_to_cornell.py --input grasp_dota.txt --output grasp.txt
+  python convert_dota_to_cornell.py -i grasp_dota.txt -o grasp.txt
 
   # 批量转换整个文件夹
-  python dota_to_cornell.py --src_dir dota_labels --dst_dir cornell_labels
+  python convert_dota_to_cornell.py --src_dir dota_labels --dst_dir cornell_labels
+  python convert_dota_to_cornell.py -s dota_labels -d cornell_labels
 """
 
 import argparse
@@ -61,10 +63,10 @@ def batch_convert(src_dir: str, dst_dir: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DOTA → Cornell 标注转换器")
-    parser.add_argument("--input", help="单个 DOTA 标注文件")
-    parser.add_argument("--output", help="输出 Cornell 标注文件")
-    parser.add_argument("--src_dir", help="批量转换：输入文件夹")
-    parser.add_argument("--dst_dir", help="批量转换：输出文件夹")
+    parser.add_argument("--input", "-i", help="单个 DOTA 标注文件")
+    parser.add_argument("--output", "-o", help="输出 Cornell 标注文件")
+    parser.add_argument("--src_dir", "-s", help="批量转换：输入文件夹")
+    parser.add_argument("--dst_dir", "-d", help="批量转换：输出文件夹")
     args = parser.parse_args()
 
     if args.input:

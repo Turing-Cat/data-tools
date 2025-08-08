@@ -2,15 +2,20 @@
 """
 convert_cornell_to_dota.py
 
+将 Cornell Grasping Dataset 标注转换为 DOTA 格式
+
 示例：
   # 转换单个文件
   python convert_cornell_to_dota.py --input grasp1.txt --output grasp1_dota.txt
+  python convert_cornell_to_dota.py -i grasp1.txt -o grasp1_dota.txt
 
   # 批量转换文件夹
   python convert_cornell_to_dota.py --src_dir cornell_labels --dst_dir dota_labels
+  python convert_cornell_to_dota.py -s cornell_labels -d dota_labels
 
   # 自定义类别与难度
   python convert_cornell_to_dota.py --input a.txt --cls myobj --diff 1
+  python convert_cornell_to_dota.py -i a.txt -c myobj --diff 1
 """
 
 import argparse
@@ -70,13 +75,13 @@ def batch_convert(src_dir: str,
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="将 Cornell Grasping Dataset 标注转换为 DOTA 格式")
-    parser.add_argument("--input", help="单个 Cornell 标注文件")
-    parser.add_argument("--output", help="输出 DOTA 标注文件")
-    parser.add_argument("--src_dir", help="批量转换：输入文件夹")
-    parser.add_argument("--dst_dir", help="批量转换：输出文件夹")
-    parser.add_argument("--cls", default="grasp",
+    parser.add_argument("--input", "-i", help="单个 Cornell 标注文件")
+    parser.add_argument("--output", "-o", help="输出 DOTA 标注文件")
+    parser.add_argument("--src_dir", "-s", help="批量转换：输入文件夹")
+    parser.add_argument("--dst_dir", "-d", help="批量转换：输出文件夹")
+    parser.add_argument("--cls", "-c", default="grasp",
                         help="DOTA 类别名，默认 grasp")
-    parser.add_argument("--diff", default="0",
+    parser.add_argument("--diff", "-f", default="0",
                         help="DOTA 难度，默认 0")
     args = parser.parse_args()
 
