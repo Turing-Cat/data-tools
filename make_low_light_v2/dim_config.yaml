@@ -1,0 +1,50 @@
+# ===== 轻度暗光照配置 - 模拟室内轻度暗环境 =====
+dataset_dir: "../02/"
+
+# ===== 全局控制 =====
+extensions: "jpg,png"
+recursive: true
+variations: 2
+prefix: "_dim_"              # 轻度暗光照前缀
+file_pattern: "r.png"
+
+# ===== 质量验证 - 已禁用 =====
+validation:
+  enable: false                    # 禁用验证，保存所有图像
+
+# ===== 轻度暗光照增强参数 - 采用medium_dark参数确保一致性 =====
+augmentation:
+  # 基础调整 - 中等难度
+  brightness_range: [0.15, 0.20]    # 15-20%亮度（适中）
+  contrast_range: [0.65, 0.75]      # 适中的对比度降低
+  saturation_range: [0.80, 0.90]    # 适中的饱和度降低
+
+  # 适中噪声
+  noise:
+    iso_intensity: [6, 10]           # 适中噪声强度
+    probability: 0.7                 # 70%概率
+
+  # 轻微模糊
+  blur:
+    sigma_range: [0.12, 0.18]        # 轻微模糊
+    probability: 0.25                # 25%概率
+
+  # 轻微不均匀照明
+  uneven_lighting:
+    multiply_range: [0.92, 1.08]     # 轻微光照变化
+    add_range: [-3, 3]               # 小幅亮度偏移
+    probability: 0.5                 # 50%概率
+    vignetting_strength: [0.04, 0.08] # 轻微暗角
+
+  # 轻微色温变化
+  color_temperature:
+    type: "mixed"
+    warm_range: [3200, 3500]         # 小范围暖光
+    cool_range: [6000, 6400]         # 小范围冷光
+    intensity_range: [0.03, 0.06]    # 轻微色温影响
+    probability: 0.15                # 低概率
+
+  # 轻微阴影增强
+  shadow_enhancement:
+    strength_range: [0.015, 0.025]   # 轻微阴影
+    probability: 0.15                # 低概率

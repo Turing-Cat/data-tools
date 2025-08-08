@@ -1,0 +1,50 @@
+# ===== 中度暗光照配置 - 模拟室内中度暗环境 =====
+dataset_dir: "../02/"
+
+# ===== 全局控制 =====
+extensions: "jpg,png"
+recursive: true
+variations: 2
+prefix: "_dark_"             # 中度暗光照前缀
+file_pattern: "r.png"
+
+# ===== 质量验证 - 已禁用 =====
+validation:
+  enable: false                    # 禁用验证，保存所有图像
+
+# ===== 中度暗光照增强参数 - 采用stable_challenging_dark参数确保一致性 =====
+augmentation:
+  # 基础调整 - 收窄范围确保一致性
+  brightness_range: [0.08, 0.12]    # 缩小到8-12%（仅50%差异而非300%）
+  contrast_range: [0.6, 0.7]        # 缩小对比度范围
+  saturation_range: [0.75, 0.85]    # 缩小饱和度范围
+
+  # 适度且一致的噪声
+  noise:
+    iso_intensity: [10, 14]          # 缩小噪声强度范围（40%差异而非100%）
+    probability: 0.8                 # 稍微降低概率，确保更多图像有相似处理
+
+  # 轻度一致的模糊
+  blur:
+    sigma_range: [0.18, 0.22]        # 大幅缩小模糊范围
+    probability: 0.3                 # 降低概率
+
+  # 温和的不均匀照明
+  uneven_lighting:
+    multiply_range: [0.9, 1.1]       # 大幅缩小光照变化范围（从50%降到22%）
+    add_range: [-4, 4]               # 缩小亮度偏移范围
+    probability: 0.6                 # 适中概率
+    vignetting_strength: [0.08, 0.12] # 缩小暗角范围
+
+  # 温和的色温变化
+  color_temperature:
+    type: "mixed"
+    warm_range: [3000, 3300]         # 缩小暖光范围
+    cool_range: [6200, 6800]         # 缩小冷光范围
+    intensity_range: [0.06, 0.10]    # 缩小色温影响强度
+    probability: 0.25                # 降低概率
+
+  # 轻微阴影增强
+  shadow_enhancement:
+    strength_range: [0.025, 0.035]   # 缩小阴影强度范围
+    probability: 0.2                 # 降低概率

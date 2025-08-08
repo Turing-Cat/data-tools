@@ -1,0 +1,72 @@
+# ===== 极暗光照配置 - 模拟室内极暗环境 =====
+dataset_dir: "../02/"
+
+# ===== 全局控制 =====
+extensions: "jpg,png"
+recursive: true
+variations: 2
+prefix: "_very_dark_"        # 极暗光照前缀
+file_pattern: "r.png"
+
+# ===== 质量验证 - 已禁用 =====
+validation:
+  enable: false                    # 禁用验证，保存所有图像
+
+# ===== 极暗光照增强参数 - 极限挑战但保持一致性 =====
+augmentation:
+  # 基础调整 - 极暗光照，范围控制得更紧
+  brightness_range: [0.04, 0.08]    # 极暗：4-8%原亮度（100%差异）
+  contrast_range: [0.5, 0.6]        # 极大幅降低对比度
+  saturation_range: [0.65, 0.75]    # 极大幅降低饱和度
+
+  # 重噪声但一致
+  noise:
+    iso_intensity: [14, 18]          # 重噪声（控制范围确保一致性）
+    probability: 0.85                # 很高概率添加噪声
+
+  # 明显但一致的模糊
+  blur:
+    sigma_range: [0.22, 0.28]        # 明显模糊但范围紧凑
+    probability: 0.4                 # 适中概率
+
+  # 明显不均匀照明但一致
+  uneven_lighting:
+    multiply_range: [0.85, 1.15]     # 明显光照变化但控制范围
+    add_range: [-6, 6]               # 明显亮度偏移
+    probability: 0.7                 # 高概率不均匀照明
+    vignetting_strength: [0.12, 0.18] # 明显暗角效果
+
+  # 明显色温变化
+  color_temperature:
+    type: "mixed"
+    warm_range: [2800, 3200]         # 更大范围暖光变化
+    cool_range: [6500, 7200]         # 更大范围冷光变化
+    intensity_range: [0.08, 0.14]    # 明显色温影响
+    probability: 0.35                # 适中概率
+
+  # 明显阴影增强
+  shadow_enhancement:
+    strength_range: [0.035, 0.055]   # 明显阴影强度
+    probability: 0.3                 # 适中概率
+    probability: 0.4                 # 高概率不均匀照明
+    vignetting_strength: [0.02, 0.04] # 明显暗角效果
+
+  # 适度不均匀照明
+  uneven_lighting:
+    multiply_range: [0.94, 1.06]     # 适度光照变化
+    add_range: [-2, 2]               # 适度亮度偏移
+    probability: 0.3
+    vignetting_strength: [0.01, 0.025] # 适度暗角效果
+
+  # 轻微色温变化
+  color_temperature:
+    type: "mixed"
+    warm_range: [3400, 3600]         # 小范围暖光变化
+    cool_range: [5900, 6100]         # 小范围冷光变化
+    intensity_range: [0.015, 0.04]   # 轻微色温影响
+    probability: 0.12
+
+  # 轻微阴影增强
+  shadow_enhancement:
+    strength_range: [0.008, 0.02]    # 轻微阴影强度
+    probability: 0.08
