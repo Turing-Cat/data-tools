@@ -1,0 +1,28 @@
+# ===== 极简一致较暗配置 - 只保留核心暗光效果 =====
+dataset_dir: "02"
+
+# ===== 全局控制 =====
+extensions: "jpg,png"
+recursive: false
+variations: 1
+prefix: "_dim_"
+file_pattern: "r.png"
+
+# ===== 核心暗光参数 - 极小随机性确保一致性 =====
+augmentation:
+  # 1. 亮度: 极小范围 ±1.7% (降低到30%)
+  brightness_range: [0.295, 0.305]  # 30% ± 1.7%
+
+  # 2. 对比度与饱和度: 极小范围 ±1.5%
+  contrast_range: [0.645, 0.655]    # 65% ± 1.5%
+  saturation_range: [0.825, 0.835]  # 83% ± 1.2%
+
+  # 3. 噪声: 极小范围 ±1.7%
+  noise:
+    iso_intensity: [8.85, 9.15]     # 9.0 ± 1.7%
+    probability: 1.0
+
+  # 4. 模糊: 极小范围 ±3%
+  blur:
+    sigma_range: [0.165, 0.175]     # 0.17 ± 3%
+    probability: 1.0
