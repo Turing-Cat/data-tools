@@ -54,38 +54,7 @@ def add_iso_noise(img: np.ndarray, intensity_range: tuple) -> np.ndarray:
     noisy = img_float + shot_noise + read_noise
     return np.clip(noisy, 0, max_val).astype(dtype)
 
-
-def add_realistic_iso_noise(img: np.ndarray, intensity_range: tuple) -> np.ndarray:
-    """
-    改进的、更逼真的传感器噪声模型
-    基于真实传感器的噪声特性：暗部以读出噪声为主，亮部以散粒噪声为主
-    """
-    dtype = img.dtype
-    max_val = 65535.0 if dtype == np.uint16 else 255.0
-    intensity = np.random.uniform(*intensity_range)
-    img_float = img.astype(np.float32)
-    
-    # 改进的参数设计 - 更合理的噪声比例
-    # 散粒噪声系数：与ISO成正比，但系数更大
-    shot_noise_gain = intensity * 0.08  # 从0.01增加到0.08
-    
-    # 读出噪声：基础噪声 + ISO相关噪声
-    base_read_noise = 2.0  # 基础读出噪声
-    iso_read_noise = intensity * 0.15  # 从0.5减少到0.15
-    read_noise_sigma = base_read_noise + iso_read_noise
-    
-    # 生成噪声
-    # 散粒噪声（泊松近似为高斯，标准差与信号平方根成正比）
-    shot_noise_std = np.sqrt(np.maximum(shot_noise_gain * img_float, 0))
-    shot_noise = shot_noise_std * np.random.normal(0, 1, img.shape)
-    
-    # 读出噪声（高斯噪声，与信号无关）
-    read_noise = np.random.normal(0, read_noise_sigma, img.shape)
-    
-    # 合成总噪声
-    noisy = img_float + shot_noise + read_noise
-    return np.clip(noisy, 0, max_val).astype(dtype)
-
+# 光照相关函数已移除 - 对已拍摄图像有害且不必要
 # 保留核心暗光化功能：亮度、对比度、噪声、模糊
 
 def adjust_contrast_saturation(img: np.ndarray, contrast_range: tuple, saturation_range: tuple) -> np.ndarray:
@@ -128,8 +97,7 @@ def build_hybrid_augmentation_pipeline(cfg: dict) -> A.Compose:
         return adjust_contrast_saturation(image, contrast_range=aug_cfg["contrast_range"], saturation_range=aug_cfg["saturation_range"])
 
     def add_iso_noise_wrapper(image, **kwargs):
-        # return add_iso_noise(image, intensity_range=aug_cfg["noise"]["iso_intensity"])
-        return add_realistic_iso_noise(image, intensity_range=aug_cfg["noise"]["iso_intensity"])
+        return add_iso_noise(image, intensity_range=aug_cfg["noise"]["iso_intensity"])
 
     # 核心暗光效果流水线
     # 1. 亮度降低
@@ -154,7 +122,7 @@ def build_hybrid_augmentation_pipeline(cfg: dict) -> A.Compose:
     )
 
     # 4. ISO噪声 (最后添加，模拟暗光下的高ISO噪声)
-    pipeline_steps.append(A.Lambda(name="add_realistic_iso_noise", image=add_iso_noise_wrapper, p=aug_cfg["noise"]["probability"]))
+    pipeline_steps.append(A.Lambda(name="add_iso_noise", image=add_iso_noise_wrapper, p=aug_cfg["noise"]["probability"]))
 
     return A.Compose(pipeline_steps)
 
