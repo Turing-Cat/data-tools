@@ -1,7 +1,7 @@
 # 低光图像生成配置文件
 
 # 数据集目录（必须指定）
-dataset_dir: "../05"
+dataset_dir: "D:/git-repo/05"
 
 # 处理的图像文件扩展名
 extensions: "jpg,jpeg,png,bmp"

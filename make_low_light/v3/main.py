@@ -5,7 +5,7 @@
 
 import argparse
 import numpy as np
-from low_light_processor import load_config, process_dataset
+from low_light_processor_08_20 import load_config, process_dataset
 
 def main():
     # 固定随机种子以保证结果可复现
