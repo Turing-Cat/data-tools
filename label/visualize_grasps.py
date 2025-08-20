@@ -31,6 +31,24 @@ class GraspVisualizer:
         self.fig, self.ax = plt.subplots(1)
         self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
         
+        # 设置窗口最大化
+        manager = plt.get_current_fig_manager()
+        try:
+            # 尝试使用不同的后端方法最大化窗口
+            if hasattr(manager, 'window'):
+                # TkAgg 后端
+                manager.window.wm_state('zoomed')
+        except Exception:
+            try:
+                # Qt 后端
+                manager.window.showMaximized()
+            except Exception:
+                try:
+                    # 其他后端
+                    manager.frame.Maximize(True)
+                except Exception:
+                    pass  # 如果所有方法都失败，忽略错误
+        
         if not self.image_files:
             print(f"目录中未找到 PNG 图片：{directory_path}")
             plt.close()
@@ -38,7 +56,7 @@ class GraspVisualizer:
         
         # 创建保存目录
         self.save_dir = os.path.join(directory_path, "visualized_grasps")
-        os.makedirs(self.save_dir, exist_ok=True)
+        
         
         self.load_and_show_image()
         plt.tight_layout()
@@ -97,7 +115,7 @@ class GraspVisualizer:
     def save_current_image(self):
         if not self.image_files:
             return
-        
+        os.makedirs(self.save_dir, exist_ok=True)
         image_path = self.image_files[self.current_index]
         base_name = os.path.splitext(os.path.basename(image_path))[0]
         save_path = os.path.join(self.save_dir, f"{base_name}_visualized.png")
