@@ -1,0 +1,33 @@
+# 低光图像生成配置文件
+
+# 数据集目录（必须指定）
+dataset_dir: "../05"
+
+# 处理的图像文件扩展名
+extensions: "jpg,jpeg,png,bmp"
+
+# 是否递归处理子目录
+recursive: False
+
+# 输出文件名前缀
+prefix: "_dark_"
+
+# 文件名过滤模式（可选）
+file_pattern: "r.png"
+
+# 低光处理参数
+processing:
+  # 亮度因子（<1使变暗，建议0.2-0.4）
+  brightness_factor: 0.3
+  
+  # Gamma校正参数（建议1.2-1.8，太大会过度暗化）
+  gamma: 1.5
+  
+  # 光子散粒噪声因子（建议0.01-0.03）
+  shot_noise_factor: 0.02
+  
+  # 读出噪声标准差（建议0.005-0.02）
+  read_noise_std: 0.01
+  
+  # 是否添加颜色偏移
+  color_shift: true
