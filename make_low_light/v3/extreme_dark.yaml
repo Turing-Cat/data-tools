@@ -1,0 +1,31 @@
+# 极暗的低光图像生成配置文件
+# 适用于深夜、月光下、极低光照等场景
+
+# 数据集目录（必须指定）
+dataset_dir: "D:/git-repo/05"
+
+# 处理的图像文件扩展名
+extensions: "jpg,jpeg,png,bmp"
+
+# 是否递归处理子目录
+recursive: False
+
+# 输出文件名前缀
+prefix: "_extreme_dark_"
+
+# 文件名过滤模式（可选）
+file_pattern: "r.png"
+
+# 低光处理参数
+processing:
+  # 亮度因子（极低亮度，细节大量丢失）
+  brightness_factor: 0.15
+  
+  # Gamma校正参数（强烈增强暗部效果）
+  gamma: 1.8
+  
+  # 光子散粒噪声因子（高噪声）
+  shot_noise_factor: 0.04
+  
+  # 读出噪声标准差（高噪声）
+  read_noise_std: 0.02

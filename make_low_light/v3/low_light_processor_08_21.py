@@ -2,7 +2,7 @@
 """
 低光图像处理模块
 实现亮度降低、Gamma校正和噪声添加等功能
-改进版本：修正噪声模型，使其更符合真实低光场景
+改进版本：修正噪声添加顺序，使其更符合真实低光场景的物理过程
 """
 
 import argparse
@@ -40,13 +40,11 @@ def apply_low_light_effect(img_path: str, output_path: str, config: dict = None)
         gamma = config['processing'].get('gamma', 1.5)
         shot_noise_factor = config['processing'].get('shot_noise_factor', 0.02)
         read_noise_std = config['processing'].get('read_noise_std', 0.01)
-        color_shift = config['processing'].get('color_shift', True)
     else:
         brightness_factor = 0.3
         gamma = 1.5
         shot_noise_factor = 0.02
         read_noise_std = 0.01
-        color_shift = True
     
     # 步骤1: 加载图像并归一化
     img = cv2.imread(img_path)
@@ -57,45 +55,35 @@ def apply_low_light_effect(img_path: str, output_path: str, config: dict = None)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = img.astype(np.float32) / 255.0  # 归一化到[0,1]
 
-    # 步骤2: 降低亮度
+    # 步骤2: 降低亮度（模拟光照不足）
     low_light = img * brightness_factor
 
-    # 步骤3: 应用Gamma校正（更温和的gamma值）
-    low_light = np.power(low_light, gamma)
-
-    # 步骤4: 添加真实的光子散粒噪声
-    # 光子噪声的标准差与信号强度的平方根成正比
+    # 步骤3: 在线性空间中添加传感器噪声（更符合物理过程）
+    
+    # 3a: 添加光子散粒噪声（泊松噪声，与信号强度相关）
     if shot_noise_factor > 0:
-        # 计算每个像素的噪声标准差
+        # 光子噪声的标准差与信号强度的平方根成正比
         noise_std = np.sqrt(np.maximum(low_light, 0)) * shot_noise_factor
         shot_noise = np.random.normal(0, 1, low_light.shape) * noise_std
         low_light = low_light + shot_noise
 
-    # 步骤5: 添加读出噪声（固定高斯噪声）
+    # 3b: 添加读出噪声（固定高斯噪声，与信号无关）
     if read_noise_std > 0:
         read_noise = np.random.normal(0, read_noise_std, low_light.shape)
         low_light = low_light + read_noise
-    
-    
-    # 步骤6: 添加轻微的颜色偏移（模拟低光下的色彩失真）
-    # if color_shift:
-    #     # 低光下通常蓝色通道噪声更明显
-    #     color_noise_factors = [1.0, 1.1, 1.2]  # R, G, B通道的噪声因子
-    #     for i in range(3):
-    #         channel_noise = np.random.normal(0, 0.005 * color_noise_factors[i], low_light[:,:,i].shape)
-    #         low_light[:,:,i] += channel_noise
 
-    # 步骤7: 模拟传感器的非线性响应（可选）
-    # 在极低光下，传感器响应可能不是完全线性的
-    # 使用S曲线轻微调整
-    # def s_curve(x, strength=0.1):
-    #     """应用S曲线调整"""
-    #     # 使用sigmoid函数的变体
-    #     return x + strength * (x - x**2) * (1 - x)
-    
-    # low_light = s_curve(low_light, strength=0.05)
 
-    # 步骤8: 裁剪到[0,1]并转换回uint8
+
+    # 步骤4: 裁剪到合理范围（避免负值影响Gamma校正）
+    low_light = np.clip(low_light, 0, 1)
+
+    # 步骤5: 应用Gamma校正（模拟ISP处理，进一步增强暗部效果）
+    # Gamma > 1 会使图像更暗，符合低光合成的目标
+    low_light = np.power(low_light, gamma)
+
+
+
+    # 步骤6: 最终裁剪并转换回uint8
     low_light = np.clip(low_light, 0, 1)
     
     # 转换回BGR格式（OpenCV格式）

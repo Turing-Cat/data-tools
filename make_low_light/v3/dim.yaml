@@ -1,0 +1,31 @@
+# 比较暗的低光图像生成配置文件 (修正版)
+# 适用于黄昏、室内光线不足等场景，效果比原版更暗
+
+# 数据集目录（必须指定）
+dataset_dir: "D:/git-repo/05"
+
+# 处理的图像文件扩展名
+extensions: "jpg,jpeg,png,bmp"
+
+# 是否递归处理子目录
+recursive: False
+
+# 输出文件名前缀 (建议修改以区分)
+prefix: "_dim_"
+
+# 文件名过滤模式（可选）
+file_pattern: "r.png"
+
+# 低光处理参数
+processing:
+  # 亮度因子（从0.5下调至0.4，明显降低亮度）
+  brightness_factor: 0.4
+  
+  # Gamma校正参数（从1.3上调至1.4，轻微增强暗部对比）
+  gamma: 1.4
+  
+  # 光子散粒噪声因子（从0.015上调至0.02，增加可见噪声）
+  shot_noise_factor: 0.02
+  
+  # 读出噪声标准差（从0.008上调至0.01，增加基础噪声）
+  read_noise_std: 0.01
