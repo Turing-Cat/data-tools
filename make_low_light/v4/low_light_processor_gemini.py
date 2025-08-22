@@ -25,72 +25,79 @@ def load_config(path: str) -> dict:
     cfg.setdefault("file_pattern", None)
     return cfg
 
+
 def apply_low_light_effect(img_path: str, output_path: str, config: dict = None):
     """
-    应用低光效果到图像
-    
-    参数:
-    - img_path: 输入图像路径
-    - output_path: 输出图像路径
-    - config: 配置参数字典
+    应用低光效果到图像（最终版，增加模糊、色彩损失和亮度随机扰动）
     """
-    # 使用默认参数或从配置中获取参数
+    # 从配置中获取所有参数
     if config is not None and 'processing' in config:
-        brightness_factor = config['processing'].get('brightness_factor', 0.3)
-        gamma = config['processing'].get('gamma', 1.5)
-        shot_noise_factor = config['processing'].get('shot_noise_factor', 0.02)
-        read_noise_std = config['processing'].get('read_noise_std', 0.01)
+        p_cfg = config['processing']
+        brightness_factor = p_cfg.get('brightness_factor', 0.2)
+        gamma = p_cfg.get('gamma', 1.8)
+        shot_noise_factor = p_cfg.get('shot_noise_factor', 0.05)
+        read_noise_std = p_cfg.get('read_noise_std', 0.03)
+        blur_kernel_size = p_cfg.get('blur_kernel_size', 5)
+        blur_sigma = p_cfg.get('blur_sigma', 1.5)
+        desaturation_factor = p_cfg.get('desaturation_factor', 0.8)
     else:
-        brightness_factor = 0.3
-        gamma = 1.5
-        shot_noise_factor = 0.02
-        read_noise_std = 0.01
-    
-    # 步骤1: 加载图像并归一化
+        # 提供一组默认的挑战性参数
+        brightness_factor = 0.2
+        gamma = 1.8
+        shot_noise_factor = 0.05
+        read_noise_std = 0.03
+        blur_kernel_size = 5
+        blur_sigma = 1.5
+        desaturation_factor = 0.8
+
+    # [新增] 步骤1a: 为亮度添加随机波动
+    brightness_factor *= np.random.uniform(0.95, 1.05)
+
+    # 步骤1b: 加载图像并归一化
     img = cv2.imread(img_path)
     if img is None:
         raise ValueError(f"无法读取图像: {img_path}")
     
-    # 转换为RGB（OpenCV默认是BGR）
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(np.float32) / 255.0  # 归一化到[0,1]
+    img = img.astype(np.float32) / 255.0
 
-    # 步骤2: 降低亮度（模拟光照不足）
+    # 步骤2: 降低亮度
     low_light = img * brightness_factor
 
-    # 步骤3: 在线性空间中添加传感器噪声（更符合物理过程）
-    
-    # 3a: 添加光子散粒噪声（泊松噪声，与信号强度相关）
+    # 步骤2a: 降低色彩饱和度
+    if desaturation_factor < 1.0:
+        hls_img = cv2.cvtColor(low_light, cv2.COLOR_RGB2HLS)
+        hls_img[:, :, 2] *= (1.0 - desaturation_factor)
+        low_light = cv2.cvtColor(hls_img, cv2.COLOR_HLS2RGB)
+
+    # 步骤2b: 应用高斯模糊
+    if blur_kernel_size > 0 and blur_sigma > 0:
+        kernel = (int(blur_kernel_size) // 2 * 2 + 1, int(blur_kernel_size) // 2 * 2 + 1)
+        low_light = cv2.GaussianBlur(low_light, kernel, blur_sigma)
+
+    # 步骤3: 添加高强度噪声
     if shot_noise_factor > 0:
-        # 光子噪声的标准差与信号强度的平方根成正比
         noise_std = np.sqrt(np.maximum(low_light, 0)) * shot_noise_factor
         shot_noise = np.random.normal(0, 1, low_light.shape) * noise_std
         low_light = low_light + shot_noise
 
-    # 3b: 添加读出噪声（固定高斯噪声，与信号无关）
     if read_noise_std > 0:
         read_noise = np.random.normal(0, read_noise_std, low_light.shape)
         low_light = low_light + read_noise
 
-
-
-    # 步骤4: 裁剪到合理范围（避免负值影响Gamma校正）
+    # 步骤4: 裁剪
     low_light = np.clip(low_light, 0, 1)
 
-    # 步骤5: 应用Gamma校正（模拟ISP处理，进一步增强暗部效果）
-    # Gamma > 1 会使图像更暗，符合低光合成的目标
+    # 步骤5: 应用Gamma校正
     low_light = np.power(low_light, gamma)
 
-
-
-    # 步骤6: 最终裁剪并转换回uint8
+    # 步骤6: 最终裁剪并转换
     low_light = np.clip(low_light, 0, 1)
-    
-    # 转换回BGR格式（OpenCV格式）
     low_light = cv2.cvtColor((low_light * 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
     
-    # 保存输出
     cv2.imwrite(output_path, low_light)
+
+# 别忘了在 process_image 函数中调用这个 apply_low_light_effect_revised 新版本
 
 def process_image(src: Path, dst: Path, config: dict = None) -> bool:
     """处理单张图像"""

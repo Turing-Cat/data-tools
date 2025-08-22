@@ -2,12 +2,11 @@
 """
 低光图像处理模块
 实现亮度降低、Gamma校正和噪声添加等功能
-改进版本：修正噪声添加顺序，使其更符合真实低光场景的物理过程
 """
 
-import argparse
 import cv2
 import numpy as np
+from scipy.stats import poisson
 from pathlib import Path
 import yaml
 from tqdm import tqdm
@@ -36,59 +35,41 @@ def apply_low_light_effect(img_path: str, output_path: str, config: dict = None)
     """
     # 使用默认参数或从配置中获取参数
     if config is not None and 'processing' in config:
-        brightness_factor = config['processing'].get('brightness_factor', 0.3)
-        gamma = config['processing'].get('gamma', 1.5)
-        shot_noise_factor = config['processing'].get('shot_noise_factor', 0.02)
-        read_noise_std = config['processing'].get('read_noise_std', 0.01)
+        brightness_factor = config['processing'].get('brightness_factor', 0.2)
+        gamma = config['processing'].get('gamma', 2.0)
+        gain = config['processing'].get('gain', 0.1)
+        read_noise_std = config['processing'].get('read_noise_std', 0.05)
     else:
-        brightness_factor = 0.3
-        gamma = 1.5
-        shot_noise_factor = 0.02
-        read_noise_std = 0.01
-    
+        brightness_factor = 0.2
+        gamma = 2.0
+        gain = 0.1
+        read_noise_std = 0.05
     # 步骤1: 加载图像并归一化
     img = cv2.imread(img_path)
     if img is None:
         raise ValueError(f"无法读取图像: {img_path}")
-    
-    # 转换为RGB（OpenCV默认是BGR）
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = img.astype(np.float32) / 255.0  # 归一化到[0,1]
 
-    # 步骤2: 降低亮度（模拟光照不足）
+    # 步骤2: 降低亮度
     low_light = img * brightness_factor
 
-    # 步骤3: 在线性空间中添加传感器噪声（更符合物理过程）
-    
-    # 3a: 添加光子散粒噪声（泊松噪声，与信号强度相关）
-    if shot_noise_factor > 0:
-        # 光子噪声的标准差与信号强度的平方根成正比
-        noise_std = np.sqrt(np.maximum(low_light, 0)) * shot_noise_factor
-        shot_noise = np.random.normal(0, 1, low_light.shape) * noise_std
-        low_light = low_light + shot_noise
-
-    # 3b: 添加读出噪声（固定高斯噪声，与信号无关）
-    if read_noise_std > 0:
-        read_noise = np.random.normal(0, read_noise_std, low_light.shape)
-        low_light = low_light + read_noise
-
-
-
-    # 步骤4: 裁剪到合理范围（避免负值影响Gamma校正）
-    low_light = np.clip(low_light, 0, 1)
-
-    # 步骤5: 应用Gamma校正（模拟ISP处理，进一步增强暗部效果）
-    # Gamma > 1 会使图像更暗，符合低光合成的目标
+    # 步骤3: 添加Gamma校正
     low_light = np.power(low_light, gamma)
 
+    # 步骤4: 添加信号相关噪声（泊松噪声，模拟光子噪声）
+    # 使用泊松分布：对每个像素应用Poisson采样（需缩放以匹配分布）
+    # 先缩放像素值到计数域（假设最大光子数为1/gain）
+    shot_noise = poisson.rvs(low_light / gain, size=low_light.shape) * gain
+    low_light = np.clip(shot_noise, 0, 1)  # 应用噪声并裁剪
 
+    # 步骤5: 添加信号无关噪声（高斯噪声，模拟读出噪声）
+    read_noise = np.random.normal(0, read_noise_std, low_light.shape)
+    low_light += read_noise
 
-    # 步骤6: 最终裁剪并转换回uint8
-    low_light = np.clip(low_light, 0, 1)
-    
-    # 转换回BGR格式（OpenCV格式）
-    low_light = cv2.cvtColor((low_light * 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
-    
+    # 步骤6: 裁剪到[0,1]并转换为uint8
+    low_light = np.clip(low_light, 0, 1) * 255
+    low_light = low_light.astype(np.uint8)
+
     # 保存输出
     cv2.imwrite(output_path, low_light)
 
@@ -127,29 +108,7 @@ def process_dataset(cfg: dict):
     rate = success / total * 100 if total else 0
     print(f"\n完成：{success}/{total}（成功率 {rate:.1f}%）")
 
-
-def main():
-    # 固定随机种子以保证结果可复现
-    np.random.seed(42)
-    
-    parser = argparse.ArgumentParser(description="低光图像生成器")
-    parser.add_argument("--config", "-c", default="low_light_config.yaml", help="YAML配置文件路径")
-    args = parser.parse_args()
-
-    cfg = load_config(args.config)
-    print(f"数据集目录: {cfg['dataset_dir']}")
-    print(f"输出前缀: {cfg['prefix']}")
-    print()
-    
-    # 显示处理参数
-    if 'processing' in cfg:
-        print("处理参数:")
-        for key, value in cfg['processing'].items():
-            print(f"  {key}: {value}")
-        print()
-    
-    process_dataset(cfg)
-
-
 if __name__ == "__main__":
-    main()
+    # 示例用法
+    # apply_low_light_effect('input.jpg', 'output.jpg')
+    pass

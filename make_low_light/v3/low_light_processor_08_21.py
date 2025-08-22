@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-低光图像处理模块
-实现亮度降低、Gamma校正和噪声添加等功能
-改进版本：修正噪声添加顺序，使其更符合真实低光场景的物理过程
+改进的低光图像处理模块
+实现更真实的低光效果，包括噪声、颜色偏移和运动模糊
 """
 
 import argparse
@@ -11,6 +10,7 @@ import numpy as np
 from pathlib import Path
 import yaml
 from tqdm import tqdm
+import hashlib
 
 def load_config(path: str) -> dict:
     """加载并设置配置文件的默认值"""
@@ -23,11 +23,30 @@ def load_config(path: str) -> dict:
     cfg.setdefault("recursive", False)
     cfg.setdefault("prefix", "_low_light_")
     cfg.setdefault("file_pattern", None)
+    
+    # 设置处理参数的默认值
+    processing_defaults = {
+        "brightness_factor": 0.3,
+        "gamma": 1.5,
+        "shot_noise_factor": 0.025,
+        "read_noise_std": 0.012,
+        "color_shift_factor": 0.05,
+        "motion_blur_prob": 0.2,
+        "max_blur_kernel": 5,
+        "sensor_sensitivity": 0.8
+    }
+    
+    if 'processing' not in cfg:
+        cfg['processing'] = processing_defaults
+    else:
+        for key, value in processing_defaults.items():
+            cfg['processing'].setdefault(key, value)
+    
     return cfg
 
 def apply_low_light_effect(img_path: str, output_path: str, config: dict = None):
     """
-    应用低光效果到图像
+    应用改进的低光效果到图像
     
     参数:
     - img_path: 输入图像路径
@@ -36,15 +55,29 @@ def apply_low_light_effect(img_path: str, output_path: str, config: dict = None)
     """
     # 使用默认参数或从配置中获取参数
     if config is not None and 'processing' in config:
-        brightness_factor = config['processing'].get('brightness_factor', 0.3)
-        gamma = config['processing'].get('gamma', 1.5)
-        shot_noise_factor = config['processing'].get('shot_noise_factor', 0.02)
-        read_noise_std = config['processing'].get('read_noise_std', 0.01)
+        proc_cfg = config['processing']
+        brightness_factor = proc_cfg.get('brightness_factor', 0.3)
+        gamma = proc_cfg.get('gamma', 1.5)
+        shot_noise_factor = proc_cfg.get('shot_noise_factor', 0.025)
+        read_noise_std = proc_cfg.get('read_noise_std', 0.012)
+        color_shift_factor = proc_cfg.get('color_shift_factor', 0.05)
+        motion_blur_prob = proc_cfg.get('motion_blur_prob', 0.2)
+        max_blur_kernel = proc_cfg.get('max_blur_kernel', 5)
+        sensor_sensitivity = proc_cfg.get('sensor_sensitivity', 0.8)
     else:
+        # 默认值
         brightness_factor = 0.3
         gamma = 1.5
-        shot_noise_factor = 0.02
-        read_noise_std = 0.01
+        shot_noise_factor = 0.025
+        read_noise_std = 0.012
+        color_shift_factor = 0.05
+        motion_blur_prob = 0.2
+        max_blur_kernel = 5
+        sensor_sensitivity = 0.8
+    
+    # 使用图像路径生成确定性但唯一的随机种子
+    path_hash = int(hashlib.md5(img_path.encode()).hexdigest()[:8], 16)
+    rng = np.random.RandomState(path_hash)
     
     # 步骤1: 加载图像并归一化
     img = cv2.imread(img_path)
@@ -55,35 +88,62 @@ def apply_low_light_effect(img_path: str, output_path: str, config: dict = None)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = img.astype(np.float32) / 255.0  # 归一化到[0,1]
 
-    # 步骤2: 降低亮度（模拟光照不足）
+    # 步骤2: 模拟传感器灵敏度差异（不同颜色通道响应不同）
+    sensitivity_matrix = np.array([
+        [sensor_sensitivity, 0, 0],
+        [0, 1.0, 0],
+        [0, 0, 1.0/sensor_sensitivity]
+    ])
+    img = np.dot(img, sensitivity_matrix)
+    img = np.clip(img, 0, 1)
+
+    # 步骤3: 降低亮度（模拟光照不足）
     low_light = img * brightness_factor
 
-    # 步骤3: 在线性空间中添加传感器噪声（更符合物理过程）
-    
-    # 3a: 添加光子散粒噪声（泊松噪声，与信号强度相关）
-    if shot_noise_factor > 0:
-        # 光子噪声的标准差与信号强度的平方根成正比
-        noise_std = np.sqrt(np.maximum(low_light, 0)) * shot_noise_factor
-        shot_noise = np.random.normal(0, 1, low_light.shape) * noise_std
-        low_light = low_light + shot_noise
-
-    # 3b: 添加读出噪声（固定高斯噪声，与信号无关）
-    if read_noise_std > 0:
-        read_noise = np.random.normal(0, read_noise_std, low_light.shape)
-        low_light = low_light + read_noise
-
-
-
-    # 步骤4: 裁剪到合理范围（避免负值影响Gamma校正）
+    # 步骤4: 添加颜色偏移（模拟低光白平衡问题）
+    color_shift = 1.0 + rng.uniform(-color_shift_factor, color_shift_factor, 3)
+    low_light = low_light * color_shift
     low_light = np.clip(low_light, 0, 1)
 
-    # 步骤5: 应用Gamma校正（模拟ISP处理，进一步增强暗部效果）
-    # Gamma > 1 会使图像更暗，符合低光合成的目标
+    # 步骤5: 在线性空间中添加传感器噪声
+    # 5a: 添加光子散粒噪声（泊松噪声，与信号强度相关）
+    if shot_noise_factor > 0:
+        # 更真实的泊松噪声近似
+        noise_std = np.sqrt(np.maximum(low_light, 0) + 1e-6) * shot_noise_factor
+        shot_noise = rng.normal(0, 1, low_light.shape) * noise_std
+        low_light = low_light + shot_noise
+
+    # 5b: 添加读出噪声（固定高斯噪声，与信号无关）
+    if read_noise_std > 0:
+        read_noise = rng.normal(0, read_noise_std, low_light.shape)
+        low_light = low_light + read_noise
+
+    # 步骤6: 裁剪到合理范围
+    low_light = np.clip(low_light, 0, 1)
+
+    # 步骤7: 应用Gamma校正
     low_light = np.power(low_light, gamma)
+    low_light = np.clip(low_light, 0, 1)
 
+    # 步骤8: 随机添加运动模糊（模拟低光下长曝光）
+    if rng.rand() < motion_blur_prob:
+        # 随机选择模糊方向和大小
+        blur_size = rng.randint(1, max_blur_kernel + 1)
+        angle = rng.uniform(0, 180)
+        
+        # 创建运动模糊核
+        kernel = np.zeros((blur_size, blur_size))
+        kernel[int((blur_size-1)/2), :] = np.ones(blur_size)
+        kernel = kernel / blur_size
+        
+        # 旋转核以模拟不同方向的运动
+        M = cv2.getRotationMatrix2D((blur_size/2, blur_size/2), angle, 1)
+        kernel = cv2.warpAffine(kernel, M, (blur_size, blur_size))
+        
+        # 应用运动模糊
+        low_light = cv2.filter2D(low_light, -1, kernel)
 
-
-    # 步骤6: 最终裁剪并转换回uint8
+    # 步骤9: 最终裁剪并转换回uint8
     low_light = np.clip(low_light, 0, 1)
     
     # 转换回BGR格式（OpenCV格式）
@@ -127,7 +187,6 @@ def process_dataset(cfg: dict):
     rate = success / total * 100 if total else 0
     print(f"\n完成：{success}/{total}（成功率 {rate:.1f}%）")
 
-
 def main():
     # 固定随机种子以保证结果可复现
     np.random.seed(42)
@@ -149,7 +208,6 @@ def main():
         print()
     
     process_dataset(cfg)
-
 
 if __name__ == "__main__":
     main()

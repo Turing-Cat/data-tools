@@ -2,13 +2,13 @@
 # 适用于深夜、月光下、极低光照等场景
 
 # 数据集目录（必须指定）
-dataset_dir: "D:/git-repo/05"
+dataset_dir: "H:/Datasets/cornell-with-low-light"
 
 # 处理的图像文件扩展名
 extensions: "jpg,jpeg,png,bmp"
 
 # 是否递归处理子目录
-recursive: False
+recursive: True
 
 # 输出文件名前缀
 prefix: "_extreme_dark_"

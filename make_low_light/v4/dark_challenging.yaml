@@ -1,0 +1,42 @@
+# 具有挑战性的暗光图像生成配置文件
+# 目标：显著破坏图像中的边缘、纹理和颜色信息，为模型带来挑战
+
+# 数据集目录（必须指定）
+dataset_dir: "D:/git-repo/05"
+
+# 处理的图像文件扩展名
+extensions: "jpg,jpeg,png,bmp"
+
+# 是否递归处理子目录
+recursive: True
+
+# 输出文件名前缀
+prefix: "_dark_"
+
+# 文件名过滤模式（可选）
+file_pattern: "r.png"
+
+# 低光处理参数
+processing:
+  # 亮度因子（非常暗）
+  brightness_factor: 0.2
+  
+  # Gamma校正参数（强对比度，进一步压暗）
+  gamma: 1.8
+  
+  # --- 核心挑战参数 ---
+
+  # 模糊内核大小（必须是正奇数），用于破坏边缘
+  blur_kernel_size: 5
+  
+  # 模糊标准差，值越大越模糊
+  blur_sigma: 1.5
+  
+  # 光子散粒噪声因子（强度大幅提高）
+  shot_noise_factor: 0.06
+  
+  # 读出噪声标准差（强度大幅提高）
+  read_noise_std: 0.04
+
+  # 色彩饱和度降低因子 (0.0-1.0), 0.8表示降低80%的饱和度
+  desaturation_factor: 0.8

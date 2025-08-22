@@ -1,0 +1,26 @@
+# 较暗的、有挑战性的低光图像生成配置文件
+# 特点：轻微模糊，中等噪声，部分色彩保留
+
+# 数据集目录
+dataset_dir: "H:/Datasets/cornell-with-low-light" #"D:/git-repo/05"
+recursive: True
+extensions: "jpg,jpeg,png,bmp"
+prefix: "_dim_"
+file_pattern: "r.png"
+
+# 低光处理参数
+processing:
+  # 基础亮度因子
+  brightness_factor: 0.35
+  # Gamma校正参数
+  gamma: 1.4
+  # 模糊内核大小（轻微模糊）
+  blur_kernel_size: 3
+  # 模糊标准差
+  blur_sigma: 0.8
+  # 光子散粒噪声因子（中等噪声）
+  shot_noise_factor: 0.03
+  # 读出噪声标准差（中等噪声）
+  read_noise_std: 0.015
+  # 色彩饱和度降低因子 (降低30%饱和度)
+  desaturation_factor: 0.3

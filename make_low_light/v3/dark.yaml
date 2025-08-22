@@ -1,13 +1,14 @@
-# 低光图像生成配置文件
+# 暗的低光图像生成配置文件
+# 适用于夜晚室内、路灯下等场景
 
 # 数据集目录（必须指定）
-dataset_dir: "D:/git-repo/05"
+dataset_dir: "H:/Datasets/cornell-with-low-light"
 
 # 处理的图像文件扩展名
 extensions: "jpg,jpeg,png,bmp"
 
 # 是否递归处理子目录
-recursive: False
+recursive: True
 
 # 输出文件名前缀
 prefix: "_dark_"
@@ -17,17 +18,14 @@ file_pattern: "r.png"
 
 # 低光处理参数
 processing:
-  # 亮度因子（<1使变暗，建议0.2-0.4）
+  # 亮度因子（中等暗度）
   brightness_factor: 0.3
   
-  # Gamma校正参数（建议1.2-1.8，太大会过度暗化）
+  # Gamma校正参数（中等增强暗部）
   gamma: 1.5
   
-  # 光子散粒噪声因子（建议0.01-0.03）
-  shot_noise_factor: 0.03
+  # 光子散粒噪声因子（中等噪声）
+  shot_noise_factor: 0.025
   
-  # 读出噪声标准差（建议0.005-0.02）
-  read_noise_std: 0.015
-  
-  # 是否添加颜色偏移
-  color_shift: true
+  # 读出噪声标准差（中等噪声）
+  read_noise_std: 0.012

@@ -2,13 +2,13 @@
 # 适用于黄昏、室内光线不足等场景，效果比原版更暗
 
 # 数据集目录（必须指定）
-dataset_dir: "D:/git-repo/05"
+dataset_dir: "H:/Datasets/cornell-with-low-light"
 
 # 处理的图像文件扩展名
 extensions: "jpg,jpeg,png,bmp"
 
 # 是否递归处理子目录
-recursive: False
+recursive: True
 
 # 输出文件名前缀 (建议修改以区分)
 prefix: "_dim_"
