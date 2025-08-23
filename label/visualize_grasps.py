@@ -1,15 +1,15 @@
 """
 visualize_grasps.py
 
-可视化指定目录下的PNG图片及抓取标注
+可视化指定目录及其子目录下的PNG图片及抓取标注
 
 示例：
-  # 可视化目录中的图片和标注
+  # 可视化目录及其子目录中的图片和标注
   python visualize_grasps.py /path/to/directory
 
 使用说明：
   - 使用左右箭头键或上下箭头键切换图片
-  - 按 's' 键保存当前可视化结果到目录中的 visualized_grasps 子目录
+  - 按 's' 键保存当前可视化结果到图像文件所在目录的 visualized_grasps 子目录
   - 按 'q' 键或关闭窗口退出程序
   - 按 'Home' 键跳转到第一张图片
   - 按 'End' 键跳转到最后一张图片
@@ -23,10 +23,20 @@ import numpy as np
 from PIL import Image
 from matplotlib import cm
 
+# 设置支持中文的字体
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
+
 class GraspVisualizer:
     def __init__(self, directory_path):
         self.directory_path = directory_path
-        self.image_files = sorted(glob.glob(os.path.join(directory_path, "*.png")))
+        # 递归搜索所有子目录中的PNG文件
+        self.image_files = []
+        for root, dirs, files in os.walk(directory_path):
+            for file in files:
+                if file.lower().endswith('.png'):
+                    self.image_files.append(os.path.join(root, file))
+        self.image_files = sorted(self.image_files)
         self.current_index = 0
         self.fig, self.ax = plt.subplots(1)
         self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
@@ -54,9 +64,8 @@ class GraspVisualizer:
             plt.close()
             return
         
-        # 创建保存目录
-        self.save_dir = os.path.join(directory_path, "visualized_grasps")
-        
+        # 获取所有子目录
+        self.subdirectories = sorted(list(set(os.path.dirname(f) for f in self.image_files)))
         
         self.load_and_show_image()
         plt.tight_layout()
@@ -64,19 +73,29 @@ class GraspVisualizer:
 
     def load_grasp_rectangles(self, file_path):
         if not os.path.exists(file_path):
-            return []
+            return [], False
         
-        with open(file_path, 'r') as f:
-            lines = f.readlines()
+        try:
+            with open(file_path, 'r') as f:
+                lines = f.readlines()
 
-        lines = [list(map(float, line.strip().split())) for line in lines]
-        grasp_rects = []
+            lines = [list(map(float, line.strip().split())) for line in lines]
+            grasp_rects = []
+            format_error = False
 
-        for i in range(0, len(lines), 4):
-            if i + 3 < len(lines):
-                rect = np.array(lines[i:i+4])
-                grasp_rects.append(rect)
-        return grasp_rects
+            for i in range(0, len(lines), 4):
+                if i + 3 < len(lines):
+                    rect = np.array(lines[i:i+4])
+                    # 检查矩形坐标格式是否正确（每个点应该有x,y两个坐标）
+                    if rect.shape == (4, 2):
+                        grasp_rects.append(rect)
+                    else:
+                        format_error = True
+                        print(f"警告: 标注文件 {file_path} 格式不正确，跳过该抓取框")
+            return grasp_rects, format_error
+        except Exception as e:
+            print(f"警告: 无法正确解析标注文件 {file_path}: {e}")
+            return [], True
 
     def load_and_show_image(self):
         self.ax.clear()
@@ -88,12 +107,13 @@ class GraspVisualizer:
 
         image_path = self.image_files[self.current_index]
         base_name = os.path.splitext(os.path.basename(image_path))[0]
-        label_path = os.path.join(self.directory_path, base_name + ".txt")
+        # 标签文件应该在图像文件相同的目录中
+        label_path = os.path.join(os.path.dirname(image_path), base_name + ".txt")
 
         img = Image.open(image_path)
         self.ax.imshow(img)
         
-        grasp_rects = self.load_grasp_rectangles(label_path)
+        grasp_rects, format_error = self.load_grasp_rectangles(label_path)
         colors = cm.rainbow(np.linspace(0, 1, len(grasp_rects)))
         
         for idx, rect in enumerate(grasp_rects):
@@ -107,21 +127,95 @@ class GraspVisualizer:
         if grasp_rects:
             self.ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         
-        title = f"{base_name}.png - {len(grasp_rects)} grasps (Image {self.current_index + 1}/{len(self.image_files)})"
+        # 显示标题和抓取框数量或错误信息
+        if format_error:
+            title = f"{os.path.relpath(image_path, self.directory_path)} - 标注文件格式不正确，无法显示抓取框 (Image {self.current_index + 1}/{len(self.image_files)})"
+            # 在图像上显示红色警告
+            self.ax.text(0.5, 0.95, "标注文件格式不正确，无法显示抓取框", 
+                        transform=self.ax.transAxes, 
+                        horizontalalignment='center', 
+                        verticalalignment='top', 
+                        bbox=dict(boxstyle='round', facecolor='red', alpha=0.7),
+                        fontsize=12, fontweight='bold', color='white')
+        else:
+            title = f"{os.path.relpath(image_path, self.directory_path)} - {len(grasp_rects)} grasps (Image {self.current_index + 1}/{len(self.image_files)})"
+        
         self.ax.set_title(title)
+        
+        # 添加快捷键说明到右侧 grasp 颜色框的下方
+        help_text = ("快捷键:\n"
+                    "→/↓ : 下一张\n"
+                    "←/↑ : 上一张\n"
+                    "Home : 第一张\n"
+                    "End : 最后一张\n"
+                    "d : 下一个子目录\n"
+                    "a : 上一个子目录\n"
+                    "s : 保存图像\n"
+                    "q : 退出")
+        
+        # 将快捷键说明放在右侧 grasp 颜色框的下方
+        self.ax.text(1.05, 0.5, help_text, transform=self.ax.transAxes, 
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
+                    fontsize=9)
+        
         self.ax.axis('off')
         self.fig.canvas.draw()
 
     def save_current_image(self):
         if not self.image_files:
             return
-        os.makedirs(self.save_dir, exist_ok=True)
         image_path = self.image_files[self.current_index]
         base_name = os.path.splitext(os.path.basename(image_path))[0]
-        save_path = os.path.join(self.save_dir, f"{base_name}_visualized.png")
+        # 在图像文件相同的目录中创建 visualized_grasps 子目录
+        image_dir = os.path.dirname(image_path)
+        save_dir = os.path.join(image_dir, "visualized_grasps")
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = os.path.join(save_dir, f"{base_name}_visualized.png")
         
         self.fig.savefig(save_path, bbox_inches='tight', dpi=300)
         print(f"已保存可视化结果到: {save_path}")
+
+    def navigate_to_next_subdirectory(self):
+        if len(self.subdirectories) <= 1:
+            return
+            
+        current_image_path = self.image_files[self.current_index]
+        current_dir = os.path.dirname(current_image_path)
+        current_dir_index = self.subdirectories.index(current_dir)
+        
+        # 计算下一个子目录索引
+        next_dir_index = (current_dir_index + 1) % len(self.subdirectories)
+        next_dir = self.subdirectories[next_dir_index]
+        
+        # 找到下一个子目录中的第一张图片
+        for i, image_path in enumerate(self.image_files):
+            if os.path.dirname(image_path) == next_dir:
+                self.current_index = i
+                break
+                
+        self.load_and_show_image()
+        print(f"已切换到子目录: {os.path.relpath(next_dir, self.directory_path)}")
+
+    def navigate_to_previous_subdirectory(self):
+        if len(self.subdirectories) <= 1:
+            return
+            
+        current_image_path = self.image_files[self.current_index]
+        current_dir = os.path.dirname(current_image_path)
+        current_dir_index = self.subdirectories.index(current_dir)
+        
+        # 计算上一个子目录索引
+        prev_dir_index = (current_dir_index - 1) % len(self.subdirectories)
+        prev_dir = self.subdirectories[prev_dir_index]
+        
+        # 找到上一个子目录中的第一张图片
+        for i, image_path in enumerate(self.image_files):
+            if os.path.dirname(image_path) == prev_dir:
+                self.current_index = i
+                break
+                
+        self.load_and_show_image()
+        print(f"已切换到子目录: {os.path.relpath(prev_dir, self.directory_path)}")
 
     def on_key_press(self, event):
         if event.key == 'right' or event.key == 'down':
@@ -141,6 +235,11 @@ class GraspVisualizer:
             self.load_and_show_image()
         elif event.key == 's':
             self.save_current_image()
+        # 添加子目录导航功能
+        elif event.key == 'd':
+            self.navigate_to_next_subdirectory()
+        elif event.key == 'a':
+            self.navigate_to_previous_subdirectory()
 
 def visualize_directory(directory_path):
     if not os.path.isdir(directory_path):
