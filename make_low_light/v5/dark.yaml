@@ -2,12 +2,12 @@
 # 特点：中度模糊，高噪声，色彩信息大量丢失
 
 # 数据集目录
-dataset_dir: "H:/Datasets/Jacquard-with-low-light" #"D:/git-repo/05"
+dataset_dir: "H:/Datasets/cornell-with-low-light" #"D:/git-repo/05"
 recursive: True
 extensions: "jpg,jpeg,png,bmp"
 prefix: "_dark_"
-file_pattern: "RGB.png"
-
+file_pattern: "r.png"
+workers: 24
 # 低光处理参数
 processing:
   # 基础亮度因子（实际会在 0.225-0.275 间波动）
