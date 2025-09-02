@@ -15,7 +15,8 @@ data-tools/
 ├── label/
 │   ├── convert_cornell_to_dota.py     # 将 Cornell 格式转换为 DOTA 格式
 │   ├── convert_dota_to_cornell.py     # 将 DOTA 格式转换为 Cornell 格式
-│   └── visualize_grasps.py            # 在图像上可视化抓取标注
+│   ├── visualize_grasps.py            # 在图像上可视化抓取标注
+│   └── visualize_real_data.py         # 可视化真实数据集中的RGB图像及抓取标注
 ├── make_low_light_v2/
 │   ├── low_light_generator.py         # 生成逼真低光图像的主程序
 │   ├── batch_generate.py              # 批量处理多个配置的脚本
@@ -47,6 +48,7 @@ data-tools/
 ### 可视化工具
 
 - `visualize_grasps.py`：用于检查图像上抓取标注的交互式查看器，支持键盘导航
+- `visualize_real_data.py`：用于可视化真实数据集中RGB图像及抓取标注的交互式查看器，支持子目录导航
 
 ## 开发命令
 
@@ -83,6 +85,9 @@ python make_low_light_v2/batch_generate.py
 ```bash
 # 可视化抓取标注
 python label/visualize_grasps.py /path/to/directory/with/images/and/annotations
+
+# 可视化真实数据集
+python label/visualize_real_data.py H:/Datasets/real-data/Darker
 ```
 
 ## 架构说明
@@ -98,4 +103,4 @@ python label/visualize_grasps.py /path/to/directory/with/images/and/annotations
 1. **添加新标注格式**：扩展现有 `label/` 目录中的转换工具
 2. **调整低光效果**：修改 YAML 配置文件中的参数
 3. **添加新光照条件**：基于现有模板创建新的 YAML 配置文件
-4. **扩展可视化功能**：修改 `visualize_grasps.py` 以支持额外的标注类型或可视化功能
+4. **扩展可视化功能**：修改 `visualize_grasps.py` 或 `visualize_real_data.py` 以支持额外的标注类型或可视化功能
