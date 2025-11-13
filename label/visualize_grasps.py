@@ -38,8 +38,10 @@ class GraspVisualizer:
                     self.image_files.append(os.path.join(root, file))
         self.image_files = sorted(self.image_files)
         self.current_index = 0
-        self.fig, self.ax = plt.subplots(1)
+        self.fig, self.ax = plt.subplots(1, figsize=(10, 6))
         self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
+        self.fig.subplots_adjust(right=0.75)
+        self.legend = None
         
         # 设置窗口最大化
         manager = plt.get_current_fig_manager()
@@ -68,7 +70,6 @@ class GraspVisualizer:
         self.subdirectories = sorted(list(set(os.path.dirname(f) for f in self.image_files)))
         
         self.load_and_show_image()
-        plt.tight_layout()
         plt.show()
 
     def load_grasp_rectangles(self, file_path):
@@ -112,6 +113,10 @@ class GraspVisualizer:
 
         img = Image.open(image_path)
         self.ax.imshow(img)
+
+        if self.legend is not None:
+            self.legend.remove()
+            self.legend = None
         
         grasp_rects, format_error = self.load_grasp_rectangles(label_path)
         colors = cm.rainbow(np.linspace(0, 1, len(grasp_rects)))
@@ -125,7 +130,8 @@ class GraspVisualizer:
             self.ax.add_patch(polygon)
         
         if grasp_rects:
-            self.ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            self.legend = self.ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0.)
+            self.legend.set_in_layout(False)
         
         # 显示标题和抓取框数量或错误信息
         if format_error:
@@ -154,7 +160,7 @@ class GraspVisualizer:
                     "q : 退出")
         
         # 将快捷键说明放在右侧 grasp 颜色框的下方
-        self.ax.text(1.05, 0.5, help_text, transform=self.ax.transAxes, 
+        self.ax.text(1.02, 0.5, help_text, transform=self.ax.transAxes, 
                     verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
                     fontsize=9)
         
