@@ -22,7 +22,33 @@ import argparse
 import glob
 import os
 from typing import List, Tuple
+import shutil
 
+def looks_like_dota_file(path: str) -> bool:
+    """
+    判断一个 txt 是否像 DOTA: 第一条非空行 token >= 8 且前 8 个可转 float，
+    同时不是 Cornell 的 2 列格式。
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            s = line.strip()
+            if not s:
+                continue
+            parts = s.split()
+
+            # Cornell 通常是 2 列
+            if len(parts) == 2:
+                return False
+
+            if len(parts) >= 8:
+                try:
+                    _ = list(map(float, parts[:8]))
+                    return True
+                except ValueError:
+                    return False
+
+            return False
+    return False
 
 def read_cornell_file(path: str) -> List[List[Tuple[float, float]]]:
     """读取 Cornell 标注文件，返回按四点分组后的列表。"""
@@ -61,15 +87,26 @@ def convert_file(in_path: str,
     write_dota(quads, out_path, cls, diff)
 
 
-def batch_convert(src_dir: str,
-                  dst_dir: str,
-                  cls: str,
-                  diff: str) -> None:
+def batch_convert(src_dir: str, dst_dir: str, cls: str, diff: int) -> None:
     os.makedirs(dst_dir, exist_ok=True)
+    same_dir = os.path.abspath(src_dir) == os.path.abspath(dst_dir)
+
     for in_path in glob.glob(os.path.join(src_dir, "*.txt")):
         out_path = os.path.join(dst_dir, os.path.basename(in_path))
+
+        # ✅ 已经是 DOTA：不做转换
+        if looks_like_dota_file(in_path):
+            if same_dir:
+                print(f"[SKIP] 已是 DOTA，跳过：{in_path}")
+            else:
+                # 目标目录不同：直接拷贝过去（等价于“跳过转换”）
+                shutil.copy2(in_path, out_path)
+                print(f"[COPY] 已是 DOTA，直接拷贝：{in_path} -> {out_path}")
+            continue
+
         convert_file(in_path, out_path, cls, diff)
-    print(f"已将 {src_dir} 中的标注全部保存到 {dst_dir}")
+
+    print(f"已处理完成：{src_dir} -> {dst_dir}")
 
 
 def main() -> None:
@@ -79,8 +116,8 @@ def main() -> None:
     parser.add_argument("--output", "-o", help="输出 DOTA 标注文件")
     parser.add_argument("--src_dir", "-s", help="批量转换：输入文件夹")
     parser.add_argument("--dst_dir", "-d", help="批量转换：输出文件夹")
-    parser.add_argument("--cls", "-c", default="grasp",
-                        help="DOTA 类别名，默认 grasp")
+    parser.add_argument("--cls", "-c", default="0",
+                        help="DOTA 类别名，默认 0")
     parser.add_argument("--diff", "-f", default="0",
                         help="DOTA 难度，默认 0")
     args = parser.parse_args()

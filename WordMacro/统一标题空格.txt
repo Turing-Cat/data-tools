@@ -1,0 +1,34 @@
+Sub FixHeadingSpaces()
+    Dim p As Paragraph
+    Dim i As Integer
+    Dim charText As String
+    
+    ' 遍历文档中的每一个段落
+    For Each p In ActiveDocument.Paragraphs
+        ' 检查该段落是否应用了标题样式（兼容中英文版 Word）
+        If p.Style Like "标题 *" Or p.Style Like "Heading *" Then
+            ' 遍历段落中的字符，寻找编号结束的位置
+            For i = 1 To p.Range.Characters.Count
+                charText = p.Range.Characters(i).Text
+                
+                ' 如果字符不是数字、不是点(.)，说明进入了正文文字部分
+                If Not (IsNumeric(charText) Or charText = "." Or charText = " ") Then
+                    ' 检查这个文字的前一个字符是否已经是空格
+                    If i > 1 Then
+                        If p.Range.Characters(i - 1).Text <> " " Then
+                            ' 如果没有空格，就在当前字符前插入一个空格
+                            p.Range.Characters(i).InsertBefore " "
+                        End If
+                    End If
+                    ' 处理完当前标题，跳出循环进入下一个段落
+                    Exit For
+                End If
+                
+                ' 如果已经发现了一个空格，说明已经符合要求，直接处理下一个标题
+                If charText = " " Then Exit For
+            Next i
+        End If
+    Next p
+    
+    MsgBox "处理完成！所有手动标题的编号后已统一添加单个空格。"
+End Sub
