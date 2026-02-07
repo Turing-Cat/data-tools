@@ -53,7 +53,7 @@ def looks_like_dota_file(path: str) -> bool:
 def read_cornell_file(path: str) -> List[List[Tuple[float, float]]]:
     """读取 Cornell 标注文件，返回按四点分组后的列表。"""
     points: List[Tuple[float, float]] = []
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue

@@ -24,7 +24,7 @@ from typing import List, Tuple
 def read_dota_file(path: str) -> List[List[Tuple[float, float]]]:
     """读取 DOTA 标注文件，返回四点列表"""
     quads: List[List[Tuple[float, float]]] = []
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         for ln, line in enumerate(f, 1):
             if not line.strip():
                 continue
@@ -42,7 +42,7 @@ def read_dota_file(path: str) -> List[List[Tuple[float, float]]]:
 
 def write_cornell(quads: List[List[Tuple[float, float]]], out_path: str) -> None:
     """把四边形列表写成 Cornell 格式"""
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         for quad in quads:
             for x, y in quad:
                 f.write(f"{x:.3f} {y:.3f}\n")
