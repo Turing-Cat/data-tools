@@ -8,7 +8,7 @@ import argparse
 def parse_filename(filename):
     """解析复杂的文件名，提取关键信息。"""
     pattern = re.compile(
-        r"(\d{8}T\d{9})_RealSense_(\d+)_frame_\d+_([\w_]+)\.(tiff|png|txt)"
+        r"(\d{8}T\d{9})_RealSense_(\d+)_frame_\d+_([\w_]+)\.(tiff|png|txt|json)"
     )
     match = pattern.match(filename)
     if match:
@@ -30,20 +30,25 @@ def run_conversion_single_dir(source_dir, target_dir):
     os.makedirs(target_dir, exist_ok=True)
 
     try:
-        filenames = os.listdir(source_dir)
-        print(f"在 '{source_dir}' 中找到 {len(filenames)} 个文件，开始处理...")
+        all_files = []
+        for root, _, files in os.walk(source_dir):
+            for name in files:
+                all_files.append(os.path.join(root, name))
+        print(f"在 '{source_dir}' 中找到 {len(all_files)} 个文件（含子目录），开始处理...")
     except FileNotFoundError:
         print(f"错误: 无法访问源目录 '{source_dir}'。请检查路径和权限。")
         return False
 
-    # --- 直接遍历所有文件，进行重命名和复制 ---
+    # --- 递归遍历所有文件，进行重命名和复制 ---
     processed_count = 0
     skipped_count = 0
     
-    for filename in filenames:
+    for file_path in all_files:
+        filename = os.path.basename(file_path)
         parsed = parse_filename(filename)
         if not parsed:
-            print(f"  - 格式不匹配，已忽略文件: {filename}")
+            rel_path = os.path.relpath(file_path, source_dir)
+            print(f"  - 格式不匹配，已忽略文件: {rel_path}")
             skipped_count += 1
             continue
 
@@ -54,6 +59,9 @@ def run_conversion_single_dir(source_dir, target_dir):
         if parsed["type"] == "rgb" and parsed["ext"] == "txt":
             data_type = "grasps"
             new_ext = "txt"
+        elif parsed["type"] == "rgb" and parsed["ext"] == "json":
+            data_type = "rgb"
+            new_ext = "json"
         else:
             data_type = parsed["type"]
             new_ext = parsed["ext"]
@@ -61,10 +69,14 @@ def run_conversion_single_dir(source_dir, target_dir):
         # 构建新的文件名 -> {timestamp}c{short_serial}_{data_type}.ext
         new_filename = f"{simplified_ts}c{short_serial}_{data_type}.{new_ext}"
         
-        source_path = os.path.join(source_dir, filename)
-        target_path = os.path.join(target_dir, new_filename)
+        source_path = file_path
+        rel_path = os.path.relpath(source_path, source_dir)
+        rel_dir = os.path.dirname(rel_path)
+        target_subdir = os.path.join(target_dir, rel_dir)
+        os.makedirs(target_subdir, exist_ok=True)
+        target_path = os.path.join(target_subdir, new_filename)
 
-        print(f"  复制: {filename}  ->  {new_filename}")
+        print(f"  复制: {rel_path}  ->  {os.path.join(rel_dir, new_filename) if rel_dir else new_filename}")
         shutil.copy2(source_path, target_path)
         processed_count += 1
 
